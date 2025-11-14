@@ -1,129 +1,129 @@
 # 🕵️ Heal HTB - Walkthrough
 
-## 🔍 Fase 1: Ricognizione Iniziale
+## 🔍 Initial Reconnaissance
 
-La mia avventura su Heal inizia con una scansione `nmap` standard:
+My journey on Heal begins with a standard `nmap` scan:
 
 ```bash
 nmap -sC -sV -A heal.htb 
 ```
 
-I risultati rivelano un trio di porte aperte:
+The results reveal a trio of open ports:
 
--   **🛡️ Porta 22/tcp:** SSH (OpenSSH)
--   **🌐 Porta 80/tcp:** HTTP (Servizio Web)
--   **❓ Porta 9001/tcp:** `tor-orport` (Interessante, ma per ora accantonata)
+-   **🛡️ Port 22/tcp:** SSH (OpenSSH)
+-   **🌐 Port 80/tcp:** HTTP (Web Service)
+-   **❓ Port 9001/tcp:** `tor-orport` (Interesting, but set aside for now)
 
-Esplorando il sito sulla porta 80 (`http://heal.htb`), trovo una classica pagina di login/registrazione. Tento la registrazione, ma sembra non funzionare... 🧱 bloccato! Un primo giro di `gobuster` sulla root non porta a nulla di succoso.  निराशा
+Exploring the site on port 80 (`http://heal.htb`), I find a classic login/registration page. I attempt to register, but it seems not to work... 🧱 blocked! A first round of `gobuster` on the root yields nothing juicy.  निराशा
 
-## 🕵️‍♀️ Fase 2: Scavando più a Fondo con Burp e API
+## 🕵️‍♀️ Digging Deeper with Burp and API
 
-Decido di mettere `Burp Suite` all'opera per analizzare il traffico e il codice JavaScript del sito. Ed ecco la svolta! 🔗 Trovo un riferimento a un hostname separato: **`api.heal.htb`**. Aha! Un'API backend!
+I decide to put `Burp Suite` to work to analyze the site's traffic and JavaScript code. And here's the breakthrough! 🔗 I find a reference to a separate hostname: **`api.heal.htb`**. Aha! A backend API!
 
-Riparto con `gobuster`, questa volta mirando all'API:
+I restart `gobuster`, this time targeting the API:
 
 ```bash
 gobuster dir -u http://api.heal.htb -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt
 ```
 
-Questa volta emergono degli endpoint interessanti, anche se protetti (Status 401):
+This time, interesting (though protected, Status 401) endpoints emerge:
 
 -   `/download` 📂
 -   `/profile` 📂
 -   `/resume` 📂
 
-## 🔓 Fase 3: Path Traversal e Credenziali
+## 🔓 Path Traversal and Credentials
 
-Testando l'endpoint `/download`, scopro una vulnerabilità di **Path Traversal**! All'inizio ottengo pagine bianche, ma giocando con `Burp Suite` e aggiungendo un **`Bearer` token** , riesco a costruire la richiesta vincente:
+Testing the `/download` endpoint, I discover a **Path Traversal** vulnerability! Initially, I get blank pages, but by playing with `Burp Suite` and adding a **`Bearer` token**, I manage to construct the winning request:
 
 ```http
 GET /download?filename=../../../../../../../../etc/passwd HTTP/1.1
 Host: api.heal.htb
-Authorization: Bearer <IL_TUO_TOKEN_QUI> 
-# ... (altri header come nell'esempio originale) ...
+Authorization: Bearer <YOUR_TOKEN_HERE> 
+# ... (other headers as in the original example) ...
 ```
 
-Successo! 📜 Scarico `/etc/passwd` e trovo due utenti con shell: **`ralph`** e **`ron`** 👤👤.
+Success! 📜 I download `/etc/passwd` and find two users with shells: **`ralph`** and **`ron`** 👤👤.
 
-Sfruttando ancora il Path Traversal, individuo il file `config/database.yml` e da lì il percorso del database: `storage/development.sqlite3`. Scarico anche quello! 💾
+Still leveraging Path Traversal, I locate the `config/database.yml` file and from there, the database path: `storage/development.sqlite3`. I download that too! 💾
 
-Dentro il database trovo l'hash bcrypt di `ralph`:
+Inside the database, I find `ralph`'s bcrypt hash:
 **`$2a$12$dUZ/O7KJT3.zE4TOK8p4RuxH3t.Bz45DSr7A94VLvY9SWx1GCSZnG`**
 
-È tempo di chiamare `John the Ripper`:
+It's time to call `John the Ripper`:
 
 ```bash
 echo '$2a$12$dUZ/O7KJT3.zE4TOK8p4RuxH3t.Bz45DSr7A94VLvY9SWx1GCSZnG' > hash.txt
 john hash.txt --wordlist=/usr/share/wordlists/rockyou.txt --format=bcrypt
 ```
 
-🔨 Crack! La password è: **`147258369`** 🔑.
+🔨 Crack! The password is: **`147258369`** 🔑.
 
-Con queste credenziali (`ralph` / `147258369`), finalmente accedo all'applicazione web sulla porta 80. ✅
+With these credentials (`ralph` / `147258369`), I finally access the web application on port 80. ✅
 
-## 🖥️ Fase 4: Shell Utente via LimeSurvey RCE
+## 🖥️ User Shell via LimeSurvey RCE
 
-Una volta dentro, noto la presenza di **LimeSurvey**. Una rapida ricerca rivela un exploit **RCE tramite upload di plugin**! 🐛
+Once inside, I notice the presence of **LimeSurvey**. A quick search reveals an **RCE exploit via plugin upload**! 🐛
 
-1.  Preparo un payload `php-rev.php`.
-2.  Lo carico come plugin tramite l'interfaccia di LimeSurvey.
-3.  Lo attivo!
-4.  Mi metto in ascolto con `nc` sulla mia macchina:
+1.  I prepare a `php-rev.php` payload.
+2.  I upload it as a plugin through the LimeSurvey interface.
+3.  I activate it!
+4.  I listen with `nc` on my machine:
  ```bash
  	nc -lvnp 4444 
    ```
-5.  Eseguo l'azione che triggera il plugin... et voilà! Ottengo una reverse shell come utente `www-data`. 🐚
+5.  I perform the action that triggers the plugin... et voilà! I get a reverse shell as the `www-data` user. 🐚
 
-Frugando nel filesystem come `www-data`, trovo il file `config.php` con una password hardcoded: **`AdmiDi0_pA$$w0rd`** 📄🤫.
+Poking around the filesystem as `www-data`, I find the `config.php` file with a hardcoded password: **`AdmiDi0_pA$$w0rd`** 📄🤫.
 
-Provo questa password con SSH per l'utente `ron`:
+I try this password with SSH for the user `ron`:
 
 ```bash
 ssh ron@heal.htb
 # Password: AdmiDi0_pA$$w0rd
 ```
 
-Accesso riuscito! Sono `ron`! Posso finalmente catturare la flag **🏴 user.txt**.
+Login successful! I am `ron`! I can finally capture the **🏴 user.txt** flag.
 
-## 🚀 Fase 5: Escalation dei Privilegi via Consul
+## 🚀 Privilege Escalation via Consul
 
-Controllo i privilegi e i servizi locali come `ron`:
+I check local privileges and services as `ron`:
 
 ```bash
 ss -lntp 
-# oppure netstat -lntp
+# or netstat -lntp
 ```
 
-Scopro un servizio in ascolto solo su `127.0.0.1` sulla porta **`8500`** 👂. Si tratta di **HashiCorp Consul**!
+I discover a service listening only on `127.0.0.1` on port **`8500`** 👂. It's **HashiCorp Consul**!
 
-Per interagirci dalla mia macchina, imposto un **Port Forwarding SSH**:
+To interact with it from my machine, I set up an **SSH Port Forwarding**:
 
 ```bash
-# Sulla macchina attaccante
+# On the attacking machine
 ssh -L 8500:127.0.0.1:8500 ron@heal.htb 
 ```
 
-🚇 Ora posso accedere a `http://localhost:8500` dal mio browser. Identifico la versione e trovo un noto exploit RCE per Consul (come **Exploit-DB 51117**) 💥.
+🚇 Now I can access `http://localhost:8500` from my browser. I identify the version and find a known RCE exploit for Consul (like **Exploit-DB 51117**) 💥.
 
-Verifico se è necessario un token ACL (spoiler: no!):
+I check if an ACL token is required (spoiler: no!):
 
 ```bash
 curl -X PUT http://127.0.0.1:8500/v1/agent/service/register -d '{}' 
 ```
 
-La richiesta va a buon fine, confermando che gli ACL sono disabilitati o mal configurati ✔️. Modifico lo script dell'exploit per **rimuovere la gestione del token** e lo lancio!
+The request is successful, confirming that ACLs are disabled or misconfigured ✔️. I modify the exploit script to **remove token handling** and launch it!
 
-1.  Avvio un altro listener `nc` sulla mia macchina:
+1.  I start another `nc` listener on my machine:
 
     ```bash
     nc -lvnp 9001 
     ```
-2.  Eseguo l'exploit modificato puntando a `http://127.0.0.1:8500`, configurandolo per inviare una shell al mio IP sulla porta 9001. 🔥💻
+2.  I execute the modified exploit pointing to `http://127.0.0.1:8500`, configuring it to send a shell to my IP on port 9001. 🔥💻
 
-Boom! Ricevo una connessione... controllo con `whoami`... sono **`root`**! 👑
+Boom! I receive a connection... I check with `whoami`... I am **`root`**! 👑
 
-Navigo in `/root/` e catturo l'ultima flag **🏴 root.txt**.
+I navigate to `/root/` and capture the final flag **🏴 root.txt**.
 
 ---
 
-🎯 **Heal HTB Pwned!** 🎉 Missione compiuta!
+🎯 **Heal HTB Pwned!** 🎉 Mission accomplished

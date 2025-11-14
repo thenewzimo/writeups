@@ -1,86 +1,86 @@
 # 🕵️ Underpass CTF - Walkthrough
 
-## 🔍 Primo Step
+## 🔍 Initial Reconnaissance
 
-Ho eseguito una scansione con `nmap` 
+I performed a scan with `nmap`
 
 ```bash
 nmap -sC -sV -A 10.10.11.48
 ```
 
-e ho rilevato due porte aperte:
+and detected two open ports:
 
-- **🛡️ Porta 22** → SSH
-- **🌐 Porta 80** → HTTP
+- **🛡️ Port 22** → SSH
+- **🌐 Port 80** → HTTP
 
-Accedendo al sito sulla porta 80, ho scoperto che tutte le sezioni erano bloccate da Apache. Ho eseguito `gobuster`, ma non ho trovato nulla di utile.
+Accessing the site on port 80, I discovered that all sections were blocked by Apache. I ran `gobuster`, but found nothing useful.
 
-Successivamente, ho provato una scansione `nmap` su **UDP*** con
+Subsequently, I tried an `nmap` scan on **UDP*** with
 
 ```bash
 nmap -sC -sU -A 10.10.11.48
 ```
 
-scoprendo alcune porte interessanti, tra cui una con un servizio **SNMP**.
+discovering some interesting ports, including one with an **SNMP** service.
 
-## 📡 Enumerazione con SNMP
+## 📡 Enumeration with SNMP
 
-Utilizzando `snmpwalk`, ho ottenuto diverse informazioni, tra cui:
+Using `snmpwalk`, I obtained various information, including:
 
-- 🧑‍💻 Un utente chiamato **Steve**.
-- 🎛️ La presenza di un server **RADIUS** su un'altra porta.
+- 🧑‍💻 A user named **Steve**.
+- 🎛️ The presence of a **RADIUS** server on another port.
 
-Dall'analisi del servizio, ho scoperto che il server in uso era **Daloradius**. Secondo la documentazione, il percorso di default è `Sito-web/daloradius`. Tuttavia, provando ad accedere via browser, Apache lo bloccava.
+From the service analysis, I discovered that the server in use was **Daloradius**. According to the documentation, the default path is `Website/daloradius`. However, trying to access it via browser, Apache blocked it.
 
-A questo punto, ho avviato `dirbuster` con una scansione più approfondita su 
+At this point, I started `dirbuster` with a more in-depth scan on
 
 ```path
 underpass.htb/daloradius 
 ```
 
-ed ho trovato un file interessante: `/app/operators/login.php`.
+and found an interesting file: `/app/operators/login.php`.
 
-## 🔑 Accesso a Daloradius
+## 🔑 Daloradius Access
 
-Dalla documentazione di Daloradius, le credenziali di default sono:
+From the Daloradius documentation, the default credentials are:
 
 - **🔐 Admin: admin**
 - **🔐 Administrator: radius**
 
-Ho provato la seconda opzione e sono riuscito ad accedere al pannello di amministrazione.
+I tried the second option and successfully accessed the administration panel.
 
-All'interno ho trovato un altro utente "svcMosh", la sua password era un hash, quindi l'ho craccata con `hashcat` e ho ottenuto la password "underwaterfriends".
+Inside, I found another user "svcMosh", his password was a hash, so I cracked it with `hashcat` and got the password "underwaterfriends".
 
-## 🖥️ Accesso SSH
+## 🖥️ SSH Access
 
-Utilizzando l'utente trovato e la password craccata, sono riuscito a connettermi via SSH:
+Using the found user and the cracked password, I managed to connect via SSH:
 
 ```bash
 ssh svcMosh@10.10.11.48
 ```
 
-All'interno della home directory di **svcMosh**, ho trovato la flag **🏴 user.txt**.
+Inside **svcMosh**'s home directory, I found the **🏴 user.txt** flag.
 
 ## 🚀 Privilege Escalation
 
-Per verificare i privilegi dell'utente, ho eseguito:
+To check the user's privileges, I ran:
 
 ```bash
 sudo -l
 ```
 
-Ho scoperto che potevo eseguire `mosh-server` senza richiedere la password di root.
+I discovered that I could execute `mosh-server` without requiring the root password.
 
-Ho avviato **mosh** con il comando:
+I started **mosh** with the command:
 
 ```bash
 mosh --server="sudo /usr/bin/mosh-server" localhost
 ```
 
-🔥 Questo mi ha fornito una shell con privilegi di **root**!
+🔥 This gave me a shell with **root** privileges!
 
-All'interno della directory `/root/`, ho trovato la flag **🏴 root.txt**.
+Inside the `/root/` directory, I found the **🏴 root.txt** flag.
 
 ---
 
-🎯 **CTF completata con successo!** 🚀
+🎯 **CTF successfully completed!** 
