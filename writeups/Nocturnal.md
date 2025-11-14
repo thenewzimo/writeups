@@ -32,7 +32,8 @@ The file upload feature only allowed specific file types (pdf, doc, docx, xls, x
 I then used `ffuf` to enumerate usernames via the `view.php` page, specifically looking for users who had uploaded `.doc` files:
 
 ```bash
-ffuf -u "http://nocturnal.htb/view.php?username=FUZZ&file=.doc" -w ~/wordlists/seclists/Usernames/Names/names.txt -fs 2985 -t 100 -H "Cookie: PHPSESSID=..."
+ffuf -u "http://nocturnal.htb/view.php?username=FUZZ&file=.doc" -w ~/wordlists/seclists/Usernames/Names/names.txt 
+-fs 2985 -t 100 -H "Cookie: PHPSESSID=..."
 ```
 
 This scan revealed the user **amanda**. Navigating to `http://nocturnal.htb/view.php?username=amanda&file=privacy.odt`, I found a document (`privacy.odt`) containing her temporary password: `arHkG7HAI68X8s1J`.

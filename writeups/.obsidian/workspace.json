@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Cat.md",
+                "file": "Nocturnal.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Cat"
+              "title": "Nocturnal"
             }
           }
         ]
@@ -94,7 +94,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "Cat.md",
+                "file": "Nocturnal.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -104,7 +104,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks for Cat"
+              "title": "Backlinks for Nocturnal"
             }
           },
           {
@@ -113,12 +113,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "Cat.md",
+                "file": "Nocturnal.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Outgoing links from Cat"
+              "title": "Outgoing links from Nocturnal"
             }
           },
           {
@@ -156,13 +156,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Cat.md",
+                "file": "Nocturnal.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline of Cat"
+              "title": "Outline of Nocturnal"
             }
           }
         ]
@@ -185,6 +185,7 @@
   },
   "active": "bca847887c3dc070",
   "lastOpenFiles": [
+    "Cat.md",
     "Nocturnal.md",
     "Planning.md"
   ]
