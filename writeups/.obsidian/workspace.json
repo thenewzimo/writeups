@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Nocturnal.md",
+                "file": "Cat.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Nocturnal"
+              "title": "Cat"
             }
           }
         ]
@@ -185,8 +185,8 @@
   },
   "active": "bca847887c3dc070",
   "lastOpenFiles": [
-    "Cat.md",
     "Nocturnal.md",
+    "Cat.md",
     "Planning.md"
   ]
 }
