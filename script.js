@@ -94,6 +94,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const fileName = event.target.dataset.file;
             if (fileName) {
                 loadWriteup(fileName);
+                if (window.innerWidth <= 900) {
+                    contentAreaElement.scrollIntoView({ behavior: 'smooth' });
+                }
+                container.classList.add('viewing-writeup');
             }
         }
     });
