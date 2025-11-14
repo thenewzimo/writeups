@@ -4,39 +4,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MyWriteup</title>
-    
-    <!-- Link al foglio di stile -->
     <link rel="stylesheet" href="style.css">
-    
-    <!-- Link al font "tech" da Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
 
-    <!-- Contenitore per lo sfondo animato -->
     <div id="particles-js"></div>
-
-    <!-- Intestazione del sito -->
     <header class="site-header">
         <h1>My Write-ups</h1>
         <a href="https://tuo-username.github.io" class="portfolio-link" target="_blank">Back to Main Portfolio</a>
     </header>
-
-    <!-- Contenitore principale del layout a due colonne -->
     <div class="container">
-        
-        <!-- Colonna Sinistra: la lista dei write-up -->
         <aside class="sidebar">
             <h2>Available Machines</h2>
             <ul id="writeup-list">
-                <!-- Questa lista verrà popolata dinamicamente da JavaScript -->
             </ul>
         </aside>
-        
-        <!-- Colonna Destra: l'area di visualizzazione del contenuto -->
-        <main id="content-area">
+            <main id="content-area">
+            <button id="back-button" title="Back to list">&larr; Back to list</button>
             <div class="placeholder">
                 <h3>Welcome!</h3>
                 <p>Select a write-up from the list on the left to view its content.</p>
@@ -44,13 +31,8 @@
         </main>
 
     </div>
-
-    <!-- Librerie JavaScript (devono essere in fondo, prima del nostro script) -->
     <script src="https://cdn.jsdelivr.net/npm/tsparticles@2.9.3/tsparticles.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    
-    <!-- Il nostro script personalizzato -->
     <script src="script.js"></script>
-
 </body>
 </html>

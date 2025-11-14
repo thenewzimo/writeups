@@ -72,6 +72,7 @@ body {
     border-radius: 8px;
     min-height: 70vh;
     transition: opacity 0.3s ease-in-out; 
+    overflow-wrap: break-word;
 }
 .sidebar h2 {
     color: var(--colore-primario);
