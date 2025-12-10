@@ -80,6 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
         { title: 'Planning', file: 'Planning.md' },
         { title: 'Titanic', file: 'Titanic.md' },
         { title: 'Underpass', file: 'Underpass.md' },
+        { title: 'Editor', file: 'Editor.md' }
     ];
     
     writeups.forEach(writeup => {
