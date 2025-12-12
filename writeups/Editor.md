@@ -1,3 +1,5 @@
+# ✏️ Editor HTB - Walkthrough
+
 ## 🔍 Initial Reconnaissance
 
 I started my reconnaissance with a thorough `nmap` scan on the target machine:
